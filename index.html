@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="تطبيق فلوسي راحت فين؟ — تتبع مصروفاتك ودخلك الشخصي بسهولة وبدون إنترنت">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="فلوسي راحت فين؟">
+  
+  <title>فلوسي راحت فين؟ — تتبع المصروفات</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💸%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💸%3C/text%3E%3C/svg%3E">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Home -->
+    <!-- ============================================ -->
+    <div id="screen-home" class="screen active">
+      <div class="app-title-bar">
+        <h1 class="app-title">💸 فلوسي راحت فين؟</h1>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector">
+        <button id="prev-month-btn" aria-label="الشهر السابق">◀</button>
+        <span id="month-label" class="month-label"></span>
+        <button id="next-month-btn" aria-label="الشهر التالي">▶</button>
+        <button id="today-btn" class="today-btn">اليوم</button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="home-add-expense" class="action-btn expense-btn">
+          <span class="btn-icon">➖</span>
+          إضافة مصروف
+        </button>
+        <button id="home-add-income" class="action-btn income-btn">
+          <span class="btn-icon">➕</span>
+          إضافة دخل
+        </button>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <div class="summary-card income">
+          <div class="label">إجمالي الدخل</div>
+          <div class="amount" id="home-total-income">0 <span class="currency">ج.م</span></div>
+        </div>
+        <div class="summary-card expense">
+          <div class="label">إجمالي المصروفات</div>
+          <div class="amount" id="home-total-expense">0 <span class="currency">ج.م</span></div>
+        </div>
+        <div class="summary-card remaining">
+          <div class="label">المتبقي</div>
+          <div class="amount" id="home-remaining">0 <span class="currency">ج.م</span></div>
+        </div>
+      </div>
+
+      <!-- Top Categories -->
+      <div class="card" id="home-top-categories-card">
+        <div class="card-title"><span class="icon">📊</span> أكثر التصنيفات استهلاكًا</div>
+        <div id="home-top-categories">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-desc">لا توجد مصروفات بعد</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown -->
+      <div class="card" id="home-category-breakdown-card">
+        <div class="card-title"><span class="icon">📋</span> المصروفات حسب التصنيف</div>
+        <div id="home-category-breakdown">
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div class="empty-desc">سجّل أول مصروف لرؤية التوزيع</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🕐</span> آخر العمليات</div>
+        <ul class="tx-list" id="home-recent-transactions">
+          <li class="empty-state">
+            <div class="empty-icon">📝</div>
+            <div class="empty-title">لا توجد عمليات بعد</div>
+            <div class="empty-desc">ابدأ بتسجيل أول مصروف أو دخل</div>
+          </li>
+        </ul>
+        <button id="home-see-all-btn" class="see-all-btn" style="display:none;">
+          عرض كل العمليات ←
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Add Expense -->
+    <!-- ============================================ -->
+    <div id="screen-add-expense" class="screen">
+      <div class="screen-header">
+        <h1>➖ إضافة مصروف</h1>
+        <button class="back-btn" data-navigate="home">✕</button>
+      </div>
+
+      <form id="expense-form" novalidate>
+        <div class="form-group" id="fg-expense-name">
+          <label>اسم المصروف <span class="required">*</span></label>
+          <input type="text" id="expense-name" class="form-control" placeholder="مثال: كشري، شيبسي، لعب كورة..." autocomplete="off">
+          <div class="error-message">يرجى إدخال اسم المصروف</div>
+        </div>
+
+        <div class="form-group" id="fg-expense-amount">
+          <label>المبلغ بالجنيه المصري <span class="required">*</span></label>
+          <input type="number" id="expense-amount" class="form-control" placeholder="0" min="0.01" step="0.01" inputmode="decimal">
+          <div class="error-message">يرجى إدخال مبلغ صحيح أكبر من صفر</div>
+        </div>
+
+        <div class="form-group" id="fg-expense-category">
+          <label>التصنيف <span class="required">*</span></label>
+          <div class="category-picker" id="expense-category-picker">
+            <!-- Populated by JS -->
+          </div>
+          <div class="error-message">يرجى اختيار تصنيف</div>
+        </div>
+
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="expense-date" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>ملاحظات (اختياري)</label>
+          <textarea id="expense-note" class="form-control" placeholder="أضف ملاحظة..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-danger" id="expense-submit-btn">
+            💾 حفظ المصروف
+          </button>
+          <button type="button" class="btn btn-secondary" data-navigate="home">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Add Income -->
+    <!-- ============================================ -->
+    <div id="screen-add-income" class="screen">
+      <div class="screen-header">
+        <h1>➕ إضافة دخل</h1>
+        <button class="back-btn" data-navigate="home">✕</button>
+      </div>
+
+      <form id="income-form" novalidate>
+        <div class="form-group" id="fg-income-name">
+          <label>مصدر الدخل <span class="required">*</span></label>
+          <input type="text" id="income-name" class="form-control" placeholder="مثال: المرتب، مكافأة..." autocomplete="off">
+          <div class="error-message">يرجى إدخال مصدر الدخل</div>
+        </div>
+
+        <div class="form-group" id="fg-income-amount">
+          <label>المبلغ بالجنيه المصري <span class="required">*</span></label>
+          <input type="number" id="income-amount" class="form-control" placeholder="0" min="0.01" step="0.01" inputmode="decimal">
+          <div class="error-message">يرجى إدخال مبلغ صحيح أكبر من صفر</div>
+        </div>
+
+        <div class="form-group" id="fg-income-category">
+          <label>التصنيف <span class="required">*</span></label>
+          <div class="category-picker" id="income-category-picker">
+            <!-- Populated by JS -->
+          </div>
+          <div class="error-message">يرجى اختيار تصنيف</div>
+        </div>
+
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="income-date" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>ملاحظات (اختياري)</label>
+          <textarea id="income-note" class="form-control" placeholder="أضف ملاحظة..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success" id="income-submit-btn">
+            💾 حفظ الدخل
+          </button>
+          <button type="button" class="btn btn-secondary" data-navigate="home">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Transactions List -->
+    <!-- ============================================ -->
+    <div id="screen-transactions" class="screen">
+      <div class="screen-header">
+        <h1>📒 سجل العمليات</h1>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="tx-search" class="form-control" placeholder="بحث بالاسم..." style="padding-right: 42px;">
+        </div>
+        <div class="filter-row">
+          <select id="tx-filter-month" class="form-control">
+            <!-- Populated by JS -->
+          </select>
+          <select id="tx-filter-type" class="form-control">
+            <option value="">كل الأنواع</option>
+            <option value="expense">مصروفات</option>
+            <option value="income">دخل</option>
+          </select>
+          <select id="tx-filter-category" class="form-control">
+            <option value="">كل التصنيفات</option>
+            <!-- Populated by JS -->
+          </select>
+        </div>
+        <button id="clear-filters-btn" class="clear-filters-btn">🗑️ مسح الفلاتر</button>
+      </div>
+
+      <div id="tx-count-info" style="font-size:0.8rem; color: var(--text-muted); margin-bottom:10px;"></div>
+
+      <ul class="tx-list" id="transactions-list">
+        <li class="empty-state">
+          <div class="empty-icon">📝</div>
+          <div class="empty-title">لا توجد عمليات</div>
+          <div class="empty-desc">لم يتم العثور على عمليات تطابق الفلاتر</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Edit Transaction -->
+    <!-- ============================================ -->
+    <div id="screen-edit-transaction" class="screen">
+      <div class="screen-header">
+        <h1>✏️ تعديل العملية</h1>
+        <button class="back-btn" data-navigate="transactions">✕</button>
+      </div>
+
+      <form id="edit-form" novalidate>
+        <input type="hidden" id="edit-id">
+        <input type="hidden" id="edit-type">
+
+        <div class="form-group" id="fg-edit-name">
+          <label id="edit-name-label">الاسم <span class="required">*</span></label>
+          <input type="text" id="edit-name" class="form-control" autocomplete="off">
+          <div class="error-message">يرجى إدخال الاسم</div>
+        </div>
+
+        <div class="form-group" id="fg-edit-amount">
+          <label>المبلغ <span class="required">*</span></label>
+          <input type="number" id="edit-amount" class="form-control" min="0.01" step="0.01" inputmode="decimal">
+          <div class="error-message">يرجى إدخال مبلغ صحيح أكبر من صفر</div>
+        </div>
+
+        <div class="form-group" id="fg-edit-category">
+          <label>التصنيف <span class="required">*</span></label>
+          <div class="category-picker" id="edit-category-picker">
+            <!-- Populated by JS -->
+          </div>
+          <div class="error-message">يرجى اختيار تصنيف</div>
+        </div>
+
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="edit-date" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <textarea id="edit-note" class="form-control"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            💾 حفظ التعديلات
+          </button>
+          <button type="button" class="btn btn-secondary" data-navigate="transactions">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: More (Hub) -->
+    <!-- ============================================ -->
+    <div id="screen-more" class="screen">
+      <div class="screen-header">
+        <h1>⚙️ المزيد</h1>
+      </div>
+
+      <div class="menu-grid">
+        <div class="menu-item" data-navigate="reports">
+          <span class="menu-icon">📊</span>
+          <span class="menu-label">التقارير</span>
+        </div>
+        <div class="menu-item" data-navigate="budgets">
+          <span class="menu-icon">🎯</span>
+          <span class="menu-label">الميزانية</span>
+        </div>
+        <div class="menu-item" data-navigate="categories">
+          <span class="menu-icon">🏷️</span>
+          <span class="menu-label">التصنيفات</span>
+        </div>
+        <div class="menu-item" data-navigate="settings">
+          <span class="menu-icon">⚙️</span>
+          <span class="menu-label">الإعدادات</span>
+        </div>
+      </div>
+
+      <div class="version-info">
+        فلوسي راحت فين؟ — الإصدار 1.0.0
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Reports -->
+    <!-- ============================================ -->
+    <div id="screen-reports" class="screen">
+      <div class="screen-header">
+        <h1>📊 التقارير</h1>
+        <button class="back-btn" data-navigate="more">✕</button>
+      </div>
+
+      <!-- Month Selector for Reports -->
+      <div class="month-selector">
+        <button id="report-prev-month" aria-label="الشهر السابق">◀</button>
+        <span id="report-month-label" class="month-label"></span>
+        <button id="report-next-month" aria-label="الشهر التالي">▶</button>
+        <button id="report-today-btn" class="today-btn">اليوم</button>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📈</span> ملخص الشهر</div>
+        <div class="report-stat-grid">
+          <div class="report-stat">
+            <div class="stat-value" id="report-income">0</div>
+            <div class="stat-label">إجمالي الدخل</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="report-expense">0</div>
+            <div class="stat-label">إجمالي المصروفات</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="report-remaining">0</div>
+            <div class="stat-label">المتبقي</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="report-tx-count">0</div>
+            <div class="stat-label">عدد العمليات</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="report-daily-avg">0</div>
+            <div class="stat-label">متوسط الصرف اليومي</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="report-highest">0</div>
+            <div class="stat-label">أعلى مصروف</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown with Donut -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🍩</span> توزيع المصروفات</div>
+        <div id="report-donut-container" class="donut-container">
+          <div class="empty-state">
+            <div class="empty-icon">🍩</div>
+            <div class="empty-desc">لا توجد مصروفات لعرض التوزيع</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Detail List -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📋</span> تفاصيل التصنيفات</div>
+        <ul class="category-bar-list" id="report-category-list">
+          <li class="empty-state">
+            <div class="empty-desc">لا توجد بيانات</div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Month Comparison -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📊</span> مقارنة مع الشهر السابق</div>
+        <div id="report-comparison">
+          <div class="empty-state">
+            <div class="empty-desc">لا توجد بيانات كافية للمقارنة</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Budgets -->
+    <!-- ============================================ -->
+    <div id="screen-budgets" class="screen">
+      <div class="screen-header">
+        <h1>🎯 الميزانية</h1>
+        <button class="back-btn" data-navigate="more">✕</button>
+      </div>
+
+      <!-- Budget Month Selector -->
+      <div class="month-selector">
+        <button id="budget-prev-month" aria-label="الشهر السابق">◀</button>
+        <span id="budget-month-label" class="month-label"></span>
+        <button id="budget-next-month" aria-label="الشهر التالي">▶</button>
+      </div>
+
+      <div class="info-banner">
+        ℹ️ الميزانية اختيارية — حدد حد إنفاق شهري لمتابعة استهلاكك
+      </div>
+
+      <!-- Overall Budget -->
+      <div class="card">
+        <div class="card-title"><span class="icon">💰</span> الميزانية الإجمالية للشهر</div>
+        <div class="form-group">
+          <label>الدخل المتوقع (ج.م)</label>
+          <input type="number" id="budget-expected-income" class="form-control" placeholder="0" min="0" step="1" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label>حد الإنفاق الشهري (ج.م)</label>
+          <input type="number" id="budget-total-limit" class="form-control" placeholder="0" min="0" step="1" inputmode="numeric">
+        </div>
+        <button id="save-overall-budget" class="btn btn-primary btn-sm" style="margin-top:8px;">💾 حفظ</button>
+      </div>
+
+      <!-- Overall Budget Progress -->
+      <div id="budget-overall-progress" class="budget-card" style="display:none;">
+        <div class="budget-header">
+          <span class="budget-name">الإنفاق الإجمالي</span>
+          <span class="budget-amount-info" id="budget-overall-info"></span>
+        </div>
+        <div class="budget-progress">
+          <div class="budget-progress-bar" id="budget-overall-bar"></div>
+        </div>
+        <div class="budget-stats" id="budget-overall-stats"></div>
+        <div id="budget-overall-alert"></div>
+      </div>
+
+      <!-- Category Budgets -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🏷️</span> ميزانية حسب التصنيف</div>
+        <div id="category-budgets-form">
+          <!-- Populated by JS -->
+        </div>
+        <button id="save-category-budgets" class="btn btn-primary btn-sm" style="margin-top:12px;">💾 حفظ ميزانيات التصنيفات</button>
+      </div>
+
+      <!-- Category Budget Progress -->
+      <div id="category-budgets-progress">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Categories Management -->
+    <!-- ============================================ -->
+    <div id="screen-categories" class="screen">
+      <div class="screen-header">
+        <h1>🏷️ التصنيفات</h1>
+        <button class="back-btn" data-navigate="more">✕</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="expense">مصروفات</button>
+        <button class="tab-btn" data-tab="income">دخل</button>
+      </div>
+
+      <!-- Add Category -->
+      <div class="card">
+        <div class="card-title"><span class="icon">➕</span> إضافة تصنيف جديد</div>
+        <div style="display:flex; gap:8px; align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <input type="text" id="new-cat-name" class="form-control" placeholder="اسم التصنيف...">
+          </div>
+          <div class="form-group" style="width:60px; margin-bottom:0;">
+            <input type="text" id="new-cat-icon" class="form-control" placeholder="🎯" style="text-align:center; font-size:1.2rem;">
+          </div>
+          <button id="add-cat-btn" class="btn btn-primary btn-sm" style="min-height:50px;">إضافة</button>
+        </div>
+      </div>
+
+      <!-- Categories List -->
+      <div class="card">
+        <div id="categories-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Settings -->
+    <!-- ============================================ -->
+    <div id="screen-settings" class="screen">
+      <div class="screen-header">
+        <h1>⚙️ الإعدادات</h1>
+        <button class="back-btn" data-navigate="more">✕</button>
+      </div>
+
+      <div class="card">
+        <!-- Dark Mode Toggle -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon">🌙</div>
+            <div>
+              <div class="setting-label">الوضع الداكن</div>
+              <div class="setting-desc">تبديل بين الوضع الفاتح والداكن</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Categories shortcut -->
+        <div class="setting-item" data-navigate="categories" style="cursor:pointer;">
+          <div class="setting-info">
+            <div class="setting-icon">🏷️</div>
+            <div>
+              <div class="setting-label">إدارة التصنيفات</div>
+              <div class="setting-desc">إضافة وتعديل وحذف التصنيفات</div>
+            </div>
+          </div>
+          <span style="color:var(--text-muted)">←</span>
+        </div>
+
+        <!-- Transaction Count -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon">📊</div>
+            <div>
+              <div class="setting-label">عدد العمليات</div>
+              <div class="setting-desc" id="settings-tx-count">جاري التحميل...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup Section -->
+      <div class="card">
+        <div class="card-title"><span class="icon">💾</span> النسخ الاحتياطي</div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon">📥</div>
+            <div>
+              <div class="setting-label">تنزيل نسخة احتياطية</div>
+              <div class="setting-desc">حفظ جميع البيانات كملف JSON</div>
+            </div>
+          </div>
+          <button id="export-json-btn" class="btn btn-primary btn-sm">تنزيل</button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon">📤</div>
+            <div>
+              <div class="setting-label">استعادة نسخة احتياطية</div>
+              <div class="setting-desc">استيراد بيانات من ملف JSON</div>
+            </div>
+          </div>
+          <div class="file-input-wrapper">
+            <input type="file" id="import-json-input" accept=".json">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-json-input').click()">استيراد</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-icon">📊</div>
+            <div>
+              <div class="setting-label">تصدير CSV</div>
+              <div class="setting-desc">تصدير العمليات كملف Excel/CSV</div>
+            </div>
+          </div>
+          <button id="export-csv-btn" class="btn btn-secondary btn-sm">تصدير</button>
+        </div>
+      </div>
+
+      <!-- App Info -->
+      <div class="card">
+        <div class="card-title"><span class="icon">ℹ️</span> عن التطبيق</div>
+        <div style="text-align:center; padding: 10px 0;">
+          <div style="font-size:2.5rem; margin-bottom:8px;">💸</div>
+          <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary);">فلوسي راحت فين؟</div>
+          <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">الإصدار 1.0.0</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:8px;">
+            تطبيق لتتبع المصروفات والدخل الشخصي<br>
+            يعمل بدون إنترنت — بياناتك محفوظة على جهازك
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCREEN: Category Detail (from reports) -->
+    <!-- ============================================ -->
+    <div id="screen-category-detail" class="screen">
+      <div class="screen-header">
+        <h1 id="cat-detail-title">تفاصيل التصنيف</h1>
+        <button class="back-btn" data-navigate="reports">✕</button>
+      </div>
+      <div class="card">
+        <div class="report-stat-grid" style="margin-bottom:16px;">
+          <div class="report-stat">
+            <div class="stat-value" id="cat-detail-total">0</div>
+            <div class="stat-label">إجمالي المصروفات</div>
+          </div>
+          <div class="report-stat">
+            <div class="stat-value" id="cat-detail-count">0</div>
+            <div class="stat-label">عدد العمليات</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">العمليات</div>
+        <ul class="tx-list category-detail-list" id="cat-detail-list">
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- #app -->
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-item active" data-nav="home">
+      <span class="nav-icon">🏠</span>
+      <span>الرئيسية</span>
+    </button>
+    <button class="nav-item add-nav expense-nav" data-nav="add-expense">
+      <span class="nav-icon">➖</span>
+      <span>مصروف</span>
+    </button>
+    <button class="nav-item add-nav income-nav" data-nav="add-income">
+      <span class="nav-icon">➕</span>
+      <span>دخل</span>
+    </button>
+    <button class="nav-item" data-nav="transactions">
+      <span class="nav-icon">📒</span>
+      <span>العمليات</span>
+    </button>
+    <button class="nav-item" data-nav="more">
+      <span class="nav-icon">⚙️</span>
+      <span>المزيد</span>
+    </button>
+  </nav>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-message" id="modal-message"></div>
+      <div id="modal-extra-content"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(function(reg) {
+            console.log('✅ Service Worker registered:', reg.scope);
+          })
+          .catch(function(err) {
+            console.log('❌ Service Worker failed:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
